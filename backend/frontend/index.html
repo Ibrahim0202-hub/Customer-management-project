@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Customer Details</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      padding: 40px;
+    }
+
+    .box {
+      background: white;
+      padding: 20px;
+      max-width: 600px;
+      margin: auto;
+      border-radius: 6px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+
+    h2, h3 {
+      text-align: center;
+    }
+
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    .delete-btn {
+      background: #dc3545;
+      margin-top: 10px;
+    }
+
+    .delete-btn:hover {
+      background: #a71d2a;
+    }
+
+    #status {
+      margin-top: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin-top: 20px;
+    }
+
+    li {
+      background: #f9f9f9;
+      margin-top: 15px;
+      padding: 15px;
+      border-radius: 8px;
+      border-left: 5px solid #007bff;
+    }
+
+    .field-box {
+      background: #ffffff;
+      padding: 8px 10px;
+      margin-top: 8px;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    .label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 2px;
+    }
+
+    .time {
+      font-size: 12px;
+      color: #777;
+      text-align: right;
+      margin-top: 6px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="box">
+    <h2>Customer Details</h2>
+
+    <form id="customerForm">
+      <input type="text" id="name" placeholder="Name" required>
+      <input type="email" id="email" placeholder="Email" required>
+      <textarea id="message" placeholder="Message" required></textarea>
+      <button type="submit">Submit</button>
+    </form>
+
+    <p id="status"></p>
+
+    <h3>Saved Customers</h3>
+    <ul id="customerList"></ul>
+  </div>
+
+  <script>
+    function formatTime(dateString) {
+      const d = new Date(dateString);
+      return d.toLocaleString();
+    }
+
+    async function loadCustomers() {
+      const res = await fetch("http://localhost:5000/api/customer");
+      const data = await res.json();
+
+      const list = document.getElementById("customerList");
+      list.innerHTML = "";
+
+      data.forEach(c => {
+        const li = document.createElement("li");
+
+        li.innerHTML = `
+          <div class="field-box">
+            <div class="label">Name</div>
+            ${c.name}
+          </div>
+
+          <div class="field-box">
+            <div class="label">Email</div>
+            ${c.email}
+          </div>
+
+          <div class="field-box">
+            <div class="label">Message</div>
+            ${c.message}
+          </div>
+
+          <div class="time">
+            ⏰ ${formatTime(c.created_at)}
+          </div>
+
+          <button class="delete-btn" onclick="deleteCustomer(${c.id})">
+            Delete
+          </button>
+        `;
+
+        list.appendChild(li);
+      });
+    }
+
+    async function deleteCustomer(id) {
+      if (!confirm("Are you sure you want to delete this customer?")) return;
+
+      try {
+        const res = await fetch(`http://localhost:5000/api/customer/${id}`, {
+          method: "DELETE"
+        });
+
+        if (!res.ok) {
+          alert("Failed to delete");
+          return;
+        }
+
+        loadCustomers();
+      } catch (err) {
+        alert("Server not reachable");
+      }
+    }
+
+    document.getElementById("customerForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const data = {
+        name: document.getElementById("name").value,
+        email: document.getElementById("email").value,
+        message: document.getElementById("message").value
+      };
+
+      try {
+        const res = await fetch("http://localhost:5000/api/customer", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(data)
+        });
+
+        const result = await res.json();
+
+        if (!res.ok) {
+          document.getElementById("status").innerText = "❌ " + result.error;
+          return;
+        }
+
+        document.getElementById("status").innerText = "✅ Saved successfully!";
+        this.reset();
+        loadCustomers();
+
+      } catch (err) {
+        document.getElementById("status").innerText = "❌ Server not reachable";
+      }
+    });
+
+    loadCustomers();
+  </script>
+
+</body>
+</html>
